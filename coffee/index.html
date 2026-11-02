@@ -5,80 +5,149 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pourover</title>
 <style>
-  :root{--accent:#ff9a00;--bg:#1e1e1e;--panel:#2a2a2a;--panel2:#333;--border:#3d3d3d;--text:#e8e8e8;--muted:#a3a3a3}
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-  header{position:sticky;top:0;background:#111;border-bottom:3px solid var(--accent);padding:14px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  header h1{margin:0;font-size:20px} header p{margin:0;color:var(--muted);font-size:13px}
-  main{max-width:900px;margin:0 auto;padding:18px}
-  .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
-  button{background:var(--accent);color:#111;border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer}
-  button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--border)}
-  button:disabled{opacity:.5;cursor:default}
-  select,input[type=file]{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px}
-  .recipes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-  .recipes button.active{outline:3px solid #fff}
-  .timer{text-align:center;padding:10px 0}
-  .phase{font-size:13px;letter-spacing:.15em;color:var(--accent);font-weight:800}
-  .count{font-size:72px;font-weight:800;line-height:1;margin:6px 0}
-  .target{font-size:18px;color:var(--muted)}
-  .bar{height:10px;background:var(--panel2);border-radius:99px;overflow:hidden;margin:14px 0}
-  .bar i{display:block;height:100%;background:var(--accent);width:0%}
-  .controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-  ol{padding-left:20px} li{margin:8px 0} li.active{color:var(--accent);font-weight:700}
-  .meta{color:var(--muted);font-size:14px} code{background:#111;padding:2px 6px;border-radius:6px}
-  small{color:var(--muted)}
+  :root{--accent:#ff9a00;--accent2:#ff6a00;--bg:#120b08;--text:#f5ede6;--muted:#b8a08a;--border:#3a2718}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5}
+  header{padding:12px 20px 0;max-width:640px;margin:0 auto}
+  header h1{margin:0;font-size:18px;font-weight:600;letter-spacing:.02em}
+  main{max-width:640px;margin:0 auto;padding:12px 20px 20px}
+  section{padding:40px 0;border-top:1px solid var(--border)}
+  section:first-child{border-top:0}
+  h2{margin:0 0 12px;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  /* Typography structure for the steps list, smallest to largest:
+     step lines 15px regular muted · Pour subheads 16px semibold · phase headings 20px bold */
+  h3{margin:28px 0 8px;font-size:20px;font-weight:700;letter-spacing:-.01em}
+  h3:first-child{margin-top:0}
+  button{background:var(--accent);color:#120b08;border:0;border-radius:999px;padding:10px 18px;font-weight:600;cursor:pointer}
+  button.secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+  button.active{border-color:var(--accent);color:var(--accent)}
+  .timer{text-align:center;padding:20px 0 40px;display:flex;flex-direction:column;align-items:center;gap:5px}
+  /* The three lines above the ring are now one tight header block, not three equal lines:
+     Total time (muted, background info) and Phase (white, current context) are close together,
+     then the Action sits 8px below them as the main line. */
+  .timer-head{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .timer-head #actionLabel{margin-top:4px}
+  .phase{font-size:12px;letter-spacing:.15em;color:var(--text);font-weight:600;text-transform:uppercase;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .count{font-size:76px;font-weight:300;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .target{font-size:16px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #actionLabel{min-height:1.3em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ring-wrap{position:relative;width:280px;height:280px;margin:0}
+  .ring-wrap svg{width:280px;height:280px;transform:rotate(-90deg)}
+  .ring-wrap circle{fill:none;stroke-width:4}
+  .ring-bg{stroke:var(--border)}
+  .ring-fg{stroke:var(--accent);stroke-linecap:round}
+  /* Elapsed time inside the small total ring (overridden below for size/colour). */
+  #elapsedLabel{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:600;line-height:1.2}
+  /* Smaller total-time ring below the main ring: same orange progress, half the size,
+     with its own elapsed time in the centre. It fills up as the brew progresses.
+     Stroke-to-stroke gap to the big ring is 16px: 5px flex gap + 18px of SVG padding
+     around the circles, minus 7px margin = 16px between strokes. */
+  .total-ring{position:relative;width:120px;height:120px;margin-top:-7px}
+  .total-ring svg{width:120px;height:120px;transform:rotate(-90deg)}
+  .total-ring circle{fill:none;stroke-width:4}
+  .total-ring-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+  .total-ring-label{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .total-ring-text #elapsedLabel{font-size:20px;font-weight:600;color:var(--text);letter-spacing:0;text-transform:none}
+  .ring-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  .controls{display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:15px;width:100%}
+  /* 15px margin + 5px timer flex gap = 20px from the small ring to the buttons. */
+  .controls .big-row{display:flex;gap:12px;width:100%}
+  .controls .big-row button{flex:1;padding:18px 36px;font-size:22px}
+  .controls .small-row{display:flex;gap:12px;width:min(280px,100%)}
+  .controls .small-row button{flex:1;padding:12px 20px;font-size:16px}
+  ol{padding-left:0;list-style:none;margin:0} li{margin:0 0 4px;color:var(--muted);font-size:15px} li.active{color:var(--text);font-weight:600}
+  .step-head{margin:12px 0 2px;color:var(--text);font-size:16px;font-weight:600;line-height:1.3}
+  .step-line{margin:0 0 2px;color:var(--muted);font-size:15px;font-weight:400;line-height:1.4}
+  .step-line.active{color:var(--text);font-weight:600}
+  /* Prep items now use exactly the same classes as Pour 1: a semibold head, then muted detail lines. */
+  .prep-item{margin:0}
+  /* Recipe section, restructured cleanly, largest to smallest:
+     title 32px white bold · totals 15px muted · phase headings 20px bold ·
+     Pour subheads 16px semibold · step lines 15px muted */
+  #recipeTitle{font-size:32px;font-weight:700;color:var(--text);letter-spacing:-.01em;text-transform:none;line-height:1}
+  .recipe-head{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .recipe-head h2{margin:0}
+  .badge{background:var(--accent);color:#120b08;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;letter-spacing:.05em;white-space:nowrap}
+  /* Spec rows: label left, value right, hairline between rows. */
+  .stats-list{margin:12px 0 12px}
+  .spec-row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:6px 0;border-bottom:1px solid var(--border);line-height:1.3}
+  .spec-row:last-child{border-bottom:0}
+  .spec-label{color:var(--muted);font-size:14px;letter-spacing:.08em;font-weight:600}
+  .spec-value{color:var(--text);font-size:16px;font-weight:600;text-align:right;white-space:nowrap}
+  .phase-group{margin-top:0;margin-bottom:12px}
+  .phase-group:last-child{margin-bottom:0}
+  .phase-group h3{margin:0 0 8px;line-height:1.2}
+  .phase-group > div > .step-head:first-child, .phase-group > div > .prep-item:first-child .step-head{margin-top:0}
+  .meta{color:var(--muted);font-size:14px;margin:16px 0 0}
+  li .num{color:var(--muted);margin-right:8px}
+  .meta{color:var(--muted);font-size:14px}
+  .md-view{background:#2a1a10;border:1px solid var(--border);border-radius:12px;padding:16px;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.5;color:var(--text);margin:16px 0 0;text-align:left}
+  .recipes{display:flex;gap:8px;flex-wrap:wrap}
+  .recipes-actions{display:flex;gap:8px;margin-bottom:16px}
+  .copyright{color:var(--muted);font-size:14px;text-align:left;margin:0}
+  .recipes-actions .file-label, .recipes-actions button{text-align:center;font-size:14px;padding:10px 18px;line-height:1.5;margin:0}
+  code{background:#2a1a10;padding:2px 6px;border-radius:4px}
+  .file-label{border:1px solid var(--border);border-radius:999px;padding:10px 18px;cursor:pointer;font-weight:600;font-size:14px;line-height:1.5}
+  .recipes button{font-size:14px}
 </style>
 </head>
 <body>
 <header>
-  <h1>☕ Pourover</h1>
-  <p>One page, JavaScript only. Recipes are .md files in the site root.</p>
+  <h1>Pourover</h1>
 </header>
 <main>
-  <div class="panel">
-    <strong>Recipes</strong>
-    <div class="recipes" id="recipeList"></div>
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <label class="secondary" style="border-radius:999px;padding:10px 16px;cursor:pointer;border:1px solid var(--border)">Open a .md file
+  <section class="timer">
+    <div class="timer-head">
+      <div class="phase" id="phaseLabel">Ready</div>
+      <div class="target" id="actionLabel" style="font-size:28px;font-weight:600;color:var(--text);line-height:1.3"></div>
+    </div>
+    <div class="ring-wrap">
+      <svg viewBox="0 0 220 220" aria-hidden="true">
+        <circle class="ring-bg" cx="110" cy="110" r="100"></circle>
+        <circle class="ring-fg" id="ringProgress" cx="110" cy="110" r="100"></circle>
+      </svg>
+      <div class="ring-text"><div class="count" id="countdown">0:00</div></div>
+    </div>
+    <div class="total-ring">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
+        <circle class="ring-fg" id="totalRingProgress" cx="60" cy="60" r="50"></circle>
+      </svg>
+      <div class="total-ring-text"><span class="total-ring-label">Total time</span><span id="elapsedLabel">0:00</span></div>
+    </div>
+    <div class="controls">
+      <div class="big-row">
+        <button id="startBtn">Start</button>
+        <button class="secondary" id="pauseBtn">Pause</button>
+      </div>
+      <div class="small-row">
+        <button class="secondary" id="skipBtn">Skip</button>
+        <button class="secondary" id="resetBtn">Reset</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="recipe-head">
+      <h2 id="recipeTitle">Recipe</h2>
+    </div>
+    <div id="statsList" class="stats-list"></div>
+    <div id="phaseList"></div>
+  </section>
+
+  <section>
+    <div class="recipes-actions">
+      <label class="file-label">Load Markdown
         <input type="file" accept=".md,text/markdown" id="fileInput" hidden>
       </label>
-      <button class="secondary" id="reloadBtn">Reload from root</button>
-      <small id="sourceNote"></small>
+      <button class="secondary" id="viewMdBtn">View Markdown</button>
     </div>
-  </div>
+    <div class="recipes" id="recipeList"></div>
+    <pre id="mdView" class="md-view" hidden></pre>
+  </section>
 
-  <div class="panel timer">
-    <div class="phase" id="phaseLabel">READY</div>
-    <div class="count" id="countdown">--:--</div>
-    <div class="target" id="targetLabel">Pick a recipe to start</div>
-    <div class="bar"><i id="progress"></i></div>
-    <div class="controls">
-      <button id="startBtn">Start</button>
-      <button class="secondary" id="pauseBtn">Pause</button>
-      <button class="secondary" id="skipBtn">Skip</button>
-      <button class="secondary" id="resetBtn">Reset</button>
-    </div>
-    <p class="meta" id="recipeMeta"></p>
-  </div>
-
-  <div class="panel">
-    <strong>Steps</strong>
-    <ol id="stepList"></ol>
-    <p class="meta" id="totals"></p>
-  </div>
-
-  <div class="panel">
-    <strong>How a recipe .md works</strong>
-    <pre style="white-space:pre-wrap;color:var(--muted)"># Classic V60
-Coffee: 15g
-Water: 250g
-
-## Steps
-- Bloom: Pour 45g over 10s, Steep 35s
-- Pour 1: Pour to 150g over 10s, Pause 30s
-- Pour 2: Pour to 250g over 10s, Pause 45s</pre>
-    <small>Put any .md file in this format in the repo root. On GitHub Pages this page tries the GitHub API for the repo it is hosted from, then <code>recipes.json</code>, then <code>default-recipe.md</code>. Your separate MD writing app just needs to write new .md files to the root.</small>
-  </div>
+  <section>
+    <p class="copyright">© 2027</p>
+  </section>
 </main>
 
 <script>
@@ -94,11 +163,19 @@ Notes: 15g coffee, medium-fine grind. Water at 93C. Bloom, then two pours.
 
 ## Steps
 
-- Bloom: Pour 45g over 10s, Steep 35s
+- Bloom: Pour 45g over 10s, Pause 35s
 - Pour 1: Pour to 150g over 10s, Pause 30s
 - Pour 2: Pour to 250g over 10s, Pause 45s
 - Drawdown: Pause 60s
 `;
+
+function phaseOf(label, current) {
+  const l = label.toLowerCase();
+  if (l.includes("bloom")) return "Bloom";
+  if (l.includes("drawdown") || l.includes("drain")) return "Drawdown";
+  if (l.includes("pour")) return "Pour";
+  return current || "Bloom";
+}
 
 function parseRecipe(text, filename) {
   const lines = text.split(/\r?\n/);
@@ -107,13 +184,14 @@ function parseRecipe(text, filename) {
   const coffee = (text.match(/Coffee:\s*(\d+(?:\.\d+)?)\s*g/i) || [])[1];
   const water = (text.match(/Water:\s*(\d+(?:\.\d+)?)\s*g/i) || [])[1];
   const notes = (text.match(/Notes:\s*(.+)/i) || [])[1] || "";
-  let cumulative = 0, steps = [];
+  let cumulative = 0, steps = [], currentPhase = null;
   for (const raw of lines) {
     const m = raw.trim().match(/^[-*]\s+(.+)$/) || raw.trim().match(/^\d+[.)]\s+(.+)$/);
     if (!m) continue;
     const body = m[1];
     if (/^(coffee|water|ratio|notes):/i.test(body)) continue;
     const label = (body.split(":")[0] || body).trim();
+    currentPhase = phaseOf(label, currentPhase);
     let pour = 0, target = cumulative;
     const toMatch = body.match(/pour to\s*(\d+(?:\.\d+)?)\s*g/i);
     const pourMatch = body.match(/pour\s*(\d+(?:\.\d+)?)\s*g/i);
@@ -123,50 +201,86 @@ function parseRecipe(text, filename) {
     const pourSec = (body.match(/pour[^,]*?(\d+)\s*s/i) || [])[1];
     const steepSec = (body.match(/steep\s*(\d+)\s*s/i) || [])[1];
     const pauseSec = (body.match(/pause\s*(\d+)\s*s/i) || [])[1];
-    steps.push({ label, body, pour, target, pourSec: pourSec ? parseInt(pourSec) : (pour ? 10 : 0), waitSec: steepSec ? parseInt(steepSec) : (pauseSec ? parseInt(pauseSec) : 0), waitKind: steepSec ? "STEEP" : "PAUSE" });
+    steps.push({ label, body, phase: currentPhase, pour, target, pourSec: pourSec ? parseInt(pourSec) : (pour ? 10 : 0), waitSec: steepSec ? parseInt(steepSec) : (pauseSec ? parseInt(pauseSec) : 0), waitKind: "PAUSE" });
   }
-  return { title, filename, coffee, water, notes, steps, totalWater: cumulative };
+  return { title, filename, coffee, water, notes, steps, totalWater: cumulative, raw: text };
 }
 
-let recipes = [], current = null, phases = [], phaseIndex = 0, remaining = 0, timerId = null, running = false;
+let recipes = [], current = null, phases = [], phaseIndex = 0, remaining = 0, timerId = null, running = false, elapsed = 0, prepMode = true, totalDuration = 0;
+
+function renderPrep() {
+  if (!current) return;
+  prepMode = true;
+  document.getElementById("phaseLabel").textContent = "Ready";
+  document.getElementById("actionLabel").textContent = "Ready to Brew";
+  document.getElementById("countdown").textContent = "0:00";
+  document.getElementById("elapsedLabel").textContent = "0:00";
+  setRing(1); setTotalRing(0);
+  document.querySelectorAll("#phaseList li").forEach(li => li.classList.remove("active"));
+}
 
 function buildPhases(recipe) {
   phases = [];
   recipe.steps.forEach((s, i) => {
-    if (s.pour > 0) phases.push({ type: "POUR", label: s.label, seconds: s.pourSec, target: s.target, step: i });
-    if (s.waitSec > 0) phases.push({ type: s.waitKind, label: s.label, seconds: s.waitSec, target: s.target, step: i });
+    if (s.pour > 0) phases.push({ type: "POUR", label: s.label, phase: s.phase, seconds: s.pourSec, target: s.target, step: i });
+    if (s.waitSec > 0) phases.push({ type: s.waitKind, label: s.label, phase: s.phase, seconds: s.waitSec, target: s.target, step: i });
   });
   phaseIndex = 0; remaining = phases.length ? phases[0].seconds : 0;
 }
 
-function fmt(s) { s = Math.max(0, Math.ceil(s)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }
+function fmt(s) { s = Math.max(0, Math.ceil(s)); return String(Math.floor(s / 60)) + ":" + String(s % 60).padStart(2, "0"); }
+const RING_C = 2 * Math.PI * 100;
+function setRing(fraction) {
+  const el = document.getElementById("ringProgress");
+  if (!el) return;
+  const f = Math.max(0, Math.min(1, fraction));
+  el.style.strokeDasharray = RING_C;
+  el.style.strokeDashoffset = RING_C * (1 - f);
+}
+const TOTAL_RING_C = 2 * Math.PI * 50;
+function setTotalRing(fraction) {
+  const el = document.getElementById("totalRingProgress");
+  if (!el) return;
+  const f = Math.max(0, Math.min(1, fraction));
+  el.style.strokeDasharray = TOTAL_RING_C;
+  el.style.strokeDashoffset = TOTAL_RING_C * (1 - f);
+}
 function beep(freq, dur) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value = freq || 880; g.gain.setValueAtTime(0.15, ctx.currentTime); o.start(); o.stop(ctx.currentTime + (dur || 0.3)); if (navigator.vibrate) navigator.vibrate(200); } catch (e) {} }
 
 function renderTimer() {
+  prepMode = false;
   const p = phases[phaseIndex];
-  document.getElementById("phaseLabel").textContent = p ? p.type + " — " + p.label : "DONE";
-  document.getElementById("countdown").textContent = p ? fmt(remaining) : "00:00";
-  document.getElementById("targetLabel").textContent = p ? (p.type === "POUR" ? "Pour to " + p.target + "g" : p.type + " — hold") : "Brew complete";
-  const total = phases.reduce((a, x) => a + x.seconds, 0);
-  const done = phases.slice(0, phaseIndex).reduce((a, x) => a + x.seconds, 0) + (p ? p.seconds - remaining : 0);
-  document.getElementById("progress").style.width = total ? (done / total * 100) + "%" : "0%";
-  document.querySelectorAll("#stepList li").forEach((li, i) => li.classList.toggle("active", p && i === p.step));
+  // Timer reads, top to bottom, as: phase, action-with-target, countdown.
+  // e.g. Bloom Phase / Pour to 45g / 0:08 — the target lives under the phase, not under the ring.
+  document.getElementById("phaseLabel").textContent = p ? (p.phase === "Pour" && p.label ? "Pour Phase · " + p.label : p.phase + " Phase") : "Done";
+  document.getElementById("actionLabel").textContent = p ? (p.type === "POUR" ? (p.target ? "Pour to " + p.target + "g" : "Pour") : "Pause for " + p.seconds + "s") : "";
+  document.getElementById("countdown").textContent = p ? fmt(remaining) : "0:00";
+  document.getElementById("elapsedLabel").textContent = fmt(elapsed);
+  setRing(p ? remaining / p.seconds : 0); setTotalRing(totalDuration ? elapsed / totalDuration : 0);
+  document.querySelectorAll("#phaseList li, #phaseList .step-line").forEach(li => {
+    // Highlight only the line actually running (pour line during a pour, pause line during a pause),
+    // not both lines of the step at once.
+    const kind = li.dataset.kind ? (p && p.type === "POUR" ? "pour" : "pause") : null;
+    li.classList.toggle("active", p && parseInt(li.dataset.step) === p.step && (!li.dataset.kind || li.dataset.kind === kind));
+  });
 }
 function tick() {
   if (!running) return;
   remaining -= 1;
-  if (remaining <= 0) { beep(); phaseIndex++; if (phaseIndex >= phases.length) { running = false; clearInterval(timerId); } else { remaining = phases[phaseIndex].seconds; } }
+  elapsed += 1;
+  if (remaining <= 0) { phaseIndex++; if (phaseIndex >= phases.length) { running = false; clearInterval(timerId); } else { remaining = phases[phaseIndex].seconds; } }
   renderTimer();
 }
 let countdownId = null;
 document.getElementById("startBtn").onclick = () => {
   if (!phases.length || running || countdownId) return;
   if (phaseIndex >= phases.length) { phaseIndex = 0; remaining = phases[0].seconds; }
-  // 5-second get-ready countdown before the first phase starts.
+  elapsed = 0;
   let n = 5;
-  document.getElementById("phaseLabel").textContent = "GET READY";
+  document.getElementById("phaseLabel").textContent = "Standby";
+  document.getElementById("actionLabel").textContent = "Standby to Brew";
   document.getElementById("countdown").textContent = "0:05";
-  document.getElementById("targetLabel").textContent = "Get ready to pour";
+  setRing(1);
   beep();
   countdownId = setInterval(() => {
     n -= 1;
@@ -175,25 +289,60 @@ document.getElementById("startBtn").onclick = () => {
       running = true; clearInterval(timerId); timerId = setInterval(tick, 1000); renderTimer(); beep();
     } else {
       document.getElementById("countdown").textContent = "0:0" + n;
-      // The last second before bloom (when the display shows 1) gets the distinct beep.
+      setRing(n / 5);
       if (n === 1) beep(1320, 0.6); else beep();
     }
   }, 1000);
 };
 document.getElementById("pauseBtn").onclick = () => { running = false; clearInterval(timerId); if (countdownId) { clearInterval(countdownId); countdownId = null; } };
-document.getElementById("skipBtn").onclick = () => { if (phaseIndex < phases.length - 1) { phaseIndex++; remaining = phases[phaseIndex].seconds; beep(); } renderTimer(); };
-document.getElementById("resetBtn").onclick = () => { running = false; clearInterval(timerId); if (countdownId) { clearInterval(countdownId); countdownId = null; } phaseIndex = 0; remaining = phases.length ? phases[0].seconds : 0; renderTimer(); };
+document.getElementById("skipBtn").onclick = () => { if (phaseIndex < phases.length - 1) { phaseIndex++; remaining = phases[phaseIndex].seconds; } renderTimer(); };
+document.getElementById("resetBtn").onclick = () => { running = false; clearInterval(timerId); if (countdownId) { clearInterval(countdownId); countdownId = null; } phaseIndex = 0; remaining = phases.length ? phases[0].seconds : 0; elapsed = 0; renderPrep(); };
 
 function selectRecipe(r) {
-  current = r; buildPhases(r); running = false; clearInterval(timerId); renderTimer();
-  document.getElementById("recipeMeta").textContent = [r.coffee ? r.coffee + "g coffee" : "", r.water ? r.water + "g water" : "", r.notes].filter(Boolean).join(" · ");
+  current = r; buildPhases(r); running = false; clearInterval(timerId); elapsed = 0;
+  document.getElementById("recipeTitle").textContent = r.title;
   const totalSec = phases.reduce((a, x) => a + x.seconds, 0);
-  document.getElementById("totals").textContent = "Total water: " + r.totalWater + "g · Total time: " + fmt(totalSec) + (r.coffee && r.totalWater ? " · Ratio 1:" + (r.totalWater / r.coffee).toFixed(1) : "");
-  document.getElementById("stepList").innerHTML = r.steps.map(s => `<li><strong>${s.label}</strong> — ${s.body} ${s.target ? `(to ${s.target}g)` : ""}</li>`).join("");
+  totalDuration = totalSec;
+  // Prep merged into spec rows, label left, value right, in this order:
+  // RATIO, DOSAGE, WATER, TEMP, TIME.
+  const temp = (r.notes.match(/(\d+)\s*°?C/i) || [])[1];
+  const stat = (label, value) => `<div class="spec-row"><div class="spec-label">${label}</div><div class="spec-value">${value}</div></div>`;
+  document.getElementById("statsList").innerHTML =
+    stat("RATIO", r.coffee && r.totalWater ? "1:" + (r.totalWater / r.coffee).toFixed(1) : "—") +
+    stat("DOSAGE", r.coffee ? r.coffee + "g" : "—") +
+    stat("WATER", r.totalWater ? r.totalWater + "g" : "—") +
+    stat("TEMP", temp ? temp + "°C" : "—") +
+    stat("TIME", fmt(totalSec));
+  // Group steps into Bloom / Pour / Drawdown phases. No separate Prep Phase anymore — prep is the stats card above.
+  const order = [], groups = {};
+  r.steps.forEach((s, i) => { if (!groups[s.phase]) { groups[s.phase] = []; order.push(s.phase); } groups[s.phase].push({ ...s, index: i }); });
+  document.getElementById("phaseList").innerHTML = order.map(phase => {
+    // Each step is split into its own lines: a pour line, then a Pause line.
+    // "Steep" is never shown — it is always called Pause.
+    const items = groups[phase].map((s, j) => {
+      const body = s.body.replace(new RegExp("^" + s.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ":\\s*", "i"), "");
+      const pourPart = body.split(/,\s*(?:pause|steep)\s*\d+\s*s/i)[0];
+      let lines = "";
+      if (phase === "Pour") lines += `<div class="step-head"><strong>${s.label}</strong></div>`;
+      if (s.pour > 0) lines += `<div data-step="${s.index}" data-kind="pour" class="step-line">${pourPart}${s.target && !pourPart.includes(s.target + "g") ? ` (to ${s.target}g)` : ""}</div>`;
+      if (s.waitSec > 0) lines += `<div data-step="${s.index}" data-kind="pause" class="step-line">Pause ${s.waitSec}s</div>`;
+      return lines;
+    }).join("");
+      return `<div class="phase-group"><h3>${phase} Phase</h3><div>${items}</div></div>`;
+  }).join("");
   document.querySelectorAll(".recipes button").forEach(b => b.classList.toggle("active", b.textContent === r.title));
+  // View Markdown button: shows the raw .md source for the current recipe, not the parsed view.
+  const mdView = document.getElementById("mdView"), viewMdBtn = document.getElementById("viewMdBtn");
+  mdView.textContent = r.raw || "";
+  mdView.hidden = true; viewMdBtn.textContent = "View Markdown";
+  renderPrep();
 }
+document.getElementById("viewMdBtn").onclick = () => {
+  const mdView = document.getElementById("mdView"), btn = document.getElementById("viewMdBtn");
+  mdView.hidden = !mdView.hidden;
+  btn.textContent = mdView.hidden ? "View Markdown" : "Hide Markdown";
+};
 function showRecipes(source) {
-  document.getElementById("sourceNote").textContent = source;
   const list = document.getElementById("recipeList");
   list.innerHTML = "";
   recipes.forEach(r => { const b = document.createElement("button"); b.className = "secondary"; b.textContent = r.title; b.onclick = () => selectRecipe(r); list.appendChild(b); });
@@ -210,7 +359,6 @@ function inferRepo() {
   return null;
 }
 async function loadRecipes() {
-  // 1) GitHub API: lists every .md in the repo root, so new files from your MD writing app appear automatically.
   const repo = inferRepo();
   if (repo) {
     try {
@@ -226,7 +374,6 @@ async function loadRecipes() {
       }
     } catch (e) {}
   }
-  // 2) recipes.json manifest, if your writing app maintains one: ["a.md", "b.md"]
   try {
     const res = await fetch("recipes.json");
     if (res.ok) {
@@ -236,16 +383,13 @@ async function loadRecipes() {
       if (recipes.length) return showRecipes("Loaded from recipes.json.");
     }
   } catch (e) {}
-  // 3) Default recipe file in the root.
   try {
     const res = await fetch("default-recipe.md");
     if (res.ok) { recipes = [parseRecipe(await res.text(), "default-recipe.md")]; return showRecipes("Loaded default-recipe.md from root."); }
   } catch (e) {}
-  // 4) Embedded fallback, so the page still works opened on its own.
   recipes = [parseRecipe(EMBEDDED_DEFAULT, "default-recipe.md")];
   showRecipes("Using embedded default recipe (no .md file found in root).");
 }
-document.getElementById("reloadBtn").onclick = loadRecipes;
 document.getElementById("fileInput").onchange = async (e) => {
   const file = e.target.files[0]; if (!file) return;
   const r = parseRecipe(await file.text(), file.name);
